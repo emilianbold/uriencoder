@@ -28,8 +28,8 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpRequest;
+//import org.springframework.http.HttpHeaders;
+//import org.springframework.http.HttpRequest;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.LinkedMultiValueMap;
@@ -304,9 +304,11 @@ public class UriComponentsBuilder implements UriBuilder, Cloneable {
 	 * @return the URI components of the URI
 	 * @since 4.1.5
 	 */
+        /*
 	public static UriComponentsBuilder fromHttpRequest(HttpRequest request) {
 		return fromUri(request.getURI()).adaptFromForwardedHeaders(request.getHeaders());
 	}
+        */
 
 	/**
 	 * Create an instance by parsing the "Origin" header of an HTTP request.
@@ -846,6 +848,7 @@ public class UriComponentsBuilder implements UriBuilder, Cloneable {
 	 * @return this UriComponentsBuilder
 	 * @since 4.2.7
 	 */
+        /*
 	UriComponentsBuilder adaptFromForwardedHeaders(HttpHeaders headers) {
 		try {
 			String forwardedHeader = headers.getFirst("Forwarded");
@@ -905,6 +908,7 @@ public class UriComponentsBuilder implements UriBuilder, Cloneable {
 		String forwardedSsl = headers.getFirst("X-Forwarded-Ssl");
 		return StringUtils.hasText(forwardedSsl) && forwardedSsl.equalsIgnoreCase("on");
 	}
+        */
 
 	private void adaptForwardedHost(String hostToUse) {
 		int portSeparatorIdx = hostToUse.lastIndexOf(':');
