@@ -17,7 +17,7 @@ How to use:
         param.put("id", "&<>");
 
         String query = param.entrySet().stream()
-                .map((e) -> e.getKey() + "=" + *SpringUtil.encodeUriComponent*(e.getValue(), StandardCharsets.UTF_8, SpringUtil.Type.QUERY_PARAM))
+                .map((e) -> e.getKey() + "=" + SpringUtil.encodeUriComponent(e.getValue(), StandardCharsets.UTF_8, SpringUtil.Type.QUERY_PARAM))
                 .collect(Collectors.joining("&"));
 
         String url = base + "?" + query;
