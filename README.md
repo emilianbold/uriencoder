@@ -10,17 +10,17 @@ Extracted now in SpringUtil.
 How to use:
 
 ```java
-        String base = "http://example.com/query";
+String base = "http://example.com/query";
 
-        Map<String, String> param = new TreeMap<>();
-        param.put("msg", "hello world");
-        param.put("id", "&<>");
+Map<String, String> param = new TreeMap<>();
+param.put("msg", "hello world");
+param.put("id", "&<>");
 
-        String query = param.entrySet().stream()
-                .map((e) -> e.getKey() + "=" + SpringUtil.encodeUriComponent(e.getValue(), StandardCharsets.UTF_8, SpringUtil.Type.QUERY_PARAM))
-                .collect(Collectors.joining("&"));
+String query = param.entrySet().stream()
+        .map((e) -> e.getKey() + "=" + SpringUtil.encodeUriComponent(e.getValue(), StandardCharsets.UTF_8, SpringUtil.Type.QUERY_PARAM))
+        .collect(Collectors.joining("&"));
 
-        String url = base + "?" + query;
+String url = base + "?" + query;
 
-        Assert.assertEquals("http://example.com/query?id=%26%3C%3E&msg=hello%20world", url);
+Assert.assertEquals("http://example.com/query?id=%26%3C%3E&msg=hello%20world", url);
 ```
