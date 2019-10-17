@@ -23,7 +23,7 @@ package org.springframework.web.util;
  * @author Rossen Stoyanchev
  * @since 5.0
  */
-public interface UriBuilderFactory extends UriTemplateHandler {
+public interface UriBuilderFactory {
 
 	/**
 	 * Initialize a builder with the given URI template.

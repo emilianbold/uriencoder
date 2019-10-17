@@ -79,10 +79,6 @@ final class HierarchicalUriComponents extends UriComponents {
 		public void verify() {
 		}
 		@Override
-		public PathComponent expand(UriTemplateVariables uriVariables, @Nullable UnaryOperator<String> encoder) {
-			return this;
-		}
-		@Override
 		public void copyToUriComponentsBuilder(UriComponentsBuilder builder) {
 		}
 		@Override
@@ -247,31 +243,6 @@ final class HierarchicalUriComponents extends UriComponents {
 
 	// Encoding
 
-	/**
-	 * Identical to {@link #encode()} but skipping over URI variable placeholders.
-	 * Also {@link #variableEncoder} is initialized with the given charset for
-	 * use later when URI variables are expanded.
-	 */
-	HierarchicalUriComponents encodeTemplate(Charset charset) {
-		if (this.encodeState.isEncoded()) {
-			return this;
-		}
-
-		// Remember the charset to encode URI variables later..
-		this.variableEncoder = value -> encodeUriComponent(value, charset, Type.URI);
-
-		UriTemplateEncoder encoder = new UriTemplateEncoder(charset);
-		String schemeTo = (getScheme() != null ? encoder.apply(getScheme(), Type.SCHEME) : null);
-		String fragmentTo = (getFragment() != null ? encoder.apply(getFragment(), Type.FRAGMENT) : null);
-		String userInfoTo = (getUserInfo() != null ? encoder.apply(getUserInfo(), Type.USER_INFO) : null);
-		String hostTo = (getHost() != null ? encoder.apply(getHost(), getHostType()) : null);
-		PathComponent pathTo = this.path.encode(encoder);
-		MultiValueMap<String, String> queryParamsTo = encodeQueryParams(encoder);
-
-		return new HierarchicalUriComponents(schemeTo, fragmentTo, userInfoTo,
-				hostTo, this.port, pathTo, queryParamsTo, EncodeState.TEMPLATE_ENCODED, this.variableEncoder);
-	}
-
 	@Override
 	public HierarchicalUriComponents encode(Charset charset) {
 		if (this.encodeState.isEncoded()) {
@@ -413,41 +384,6 @@ final class HierarchicalUriComponents extends UriComponents {
 
 
 	// Expanding
-
-	@Override
-	protected HierarchicalUriComponents expandInternal(UriTemplateVariables uriVariables) {
-
-		Assert.state(!this.encodeState.equals(EncodeState.FULLY_ENCODED),
-				"URI components already encoded, and could not possibly contain '{' or '}'.");
-
-		// Array-based vars rely on the below order..
-
-		String schemeTo = expandUriComponent(getScheme(), uriVariables, this.variableEncoder);
-		String userInfoTo = expandUriComponent(this.userInfo, uriVariables, this.variableEncoder);
-		String hostTo = expandUriComponent(this.host, uriVariables, this.variableEncoder);
-		String portTo = expandUriComponent(this.port, uriVariables, this.variableEncoder);
-		PathComponent pathTo = this.path.expand(uriVariables, this.variableEncoder);
-		MultiValueMap<String, String> queryParamsTo = expandQueryParams(uriVariables);
-		String fragmentTo = expandUriComponent(getFragment(), uriVariables, this.variableEncoder);
-
-		return new HierarchicalUriComponents(schemeTo, fragmentTo, userInfoTo,
-				hostTo, portTo, pathTo, queryParamsTo, this.encodeState, this.variableEncoder);
-	}
-
-	private MultiValueMap<String, String> expandQueryParams(UriTemplateVariables variables) {
-		int size = this.queryParams.size();
-		MultiValueMap<String, String> result = new LinkedMultiValueMap<>(size);
-		UriTemplateVariables queryVariables = new QueryUriTemplateVariables(variables);
-		this.queryParams.forEach((key, values) -> {
-			String name = expandUriComponent(key, queryVariables, this.variableEncoder);
-			List<String> expandedValues = new ArrayList<>(values.size());
-			for (String value : values) {
-				expandedValues.add(expandUriComponent(value, queryVariables, this.variableEncoder));
-			}
-			result.put(name, expandedValues);
-		});
-		return CollectionUtils.unmodifiableMultiValueMap(result);
-	}
 
 	@Override
 	public UriComponents normalize() {
@@ -752,80 +688,6 @@ final class HierarchicalUriComponents extends UriComponents {
 	}
 
 
-	private static class UriTemplateEncoder	implements BiFunction<String, Type, String> {
-
-		private final Charset charset;
-
-		private final StringBuilder currentLiteral = new StringBuilder();
-
-		private final StringBuilder currentVariable = new StringBuilder();
-
-		private final StringBuilder output = new StringBuilder();
-
-
-		public UriTemplateEncoder(Charset charset) {
-			this.charset = charset;
-		}
-
-
-		@Override
-		public String apply(String source, Type type) {
-
-			// Only URI variable (nothing to encode)..
-			if (source.length() > 1 && source.charAt(0) == '{' && source.charAt(source.length() -1) == '}') {
-				return source;
-			}
-
-			// Only literal (encode full source)..
-			if (source.indexOf('{') == -1) {
-				return encodeUriComponent(source, this.charset, type);
-			}
-
-			// Mixed literal parts and URI variables, maybe (encode literal parts only)..
-			int level = 0;
-			clear(this.currentLiteral);
-			clear(this.currentVariable);
-			clear(this.output);
-			for (char c : source.toCharArray()) {
-				if (c == '{') {
-					level++;
-					if (level == 1) {
-						encodeAndAppendCurrentLiteral(type);
-					}
-				}
-				if (c == '}' && level > 0) {
-					level--;
-					this.currentVariable.append('}');
-					if (level == 0) {
-						this.output.append(this.currentVariable);
-						clear(this.currentVariable);
-					}
-				}
-				else if (level > 0) {
-					this.currentVariable.append(c);
-				}
-				else {
-					this.currentLiteral.append(c);
-				}
-			}
-			if (level > 0) {
-				this.currentLiteral.append(this.currentVariable);
-			}
-			encodeAndAppendCurrentLiteral(type);
-			return this.output.toString();
-		}
-
-		private void encodeAndAppendCurrentLiteral(Type type) {
-			this.output.append(encodeUriComponent(this.currentLiteral.toString(), this.charset, type));
-			clear(this.currentLiteral);
-		}
-
-		private void clear(StringBuilder sb) {
-			sb.delete(0, sb.length());
-		}
-	}
-
-
 	/**
 	 * Defines the contract for path (segments).
 	 */
@@ -838,8 +700,6 @@ final class HierarchicalUriComponents extends UriComponents {
 		PathComponent encode(BiFunction<String, Type, String> encoder);
 
 		void verify();
-
-		PathComponent expand(UriTemplateVariables uriVariables, @Nullable UnaryOperator<String> encoder);
 
 		void copyToUriComponentsBuilder(UriComponentsBuilder builder);
 	}
@@ -878,13 +738,7 @@ final class HierarchicalUriComponents extends UriComponents {
 			verifyUriComponent(getPath(), Type.PATH);
 		}
 
-		@Override
-		public PathComponent expand(UriTemplateVariables uriVariables, @Nullable UnaryOperator<String> encoder) {
-			String expandedPath = expandUriComponent(getPath(), uriVariables, encoder);
-			return new FullPathComponent(expandedPath);
-		}
-
-		@Override
+ 		@Override
 		public void copyToUriComponentsBuilder(UriComponentsBuilder builder) {
 			builder.path(getPath());
 		}
@@ -945,17 +799,6 @@ final class HierarchicalUriComponents extends UriComponents {
 			for (String pathSegment : getPathSegments()) {
 				verifyUriComponent(pathSegment, Type.PATH_SEGMENT);
 			}
-		}
-
-		@Override
-		public PathComponent expand(UriTemplateVariables uriVariables, @Nullable UnaryOperator<String> encoder) {
-			List<String> pathSegments = getPathSegments();
-			List<String> expandedPathSegments = new ArrayList<>(pathSegments.size());
-			for (String pathSegment : pathSegments) {
-				String expandedPathSegment = expandUriComponent(pathSegment, uriVariables, encoder);
-				expandedPathSegments.add(expandedPathSegment);
-			}
-			return new PathSegmentComponent(expandedPathSegments);
 		}
 
 		@Override
@@ -1023,39 +866,10 @@ final class HierarchicalUriComponents extends UriComponents {
 		}
 
 		@Override
-		public PathComponent expand(UriTemplateVariables uriVariables, @Nullable UnaryOperator<String> encoder) {
-			List<PathComponent> expandedComponents = new ArrayList<>(this.pathComponents.size());
-			for (PathComponent pathComponent : this.pathComponents) {
-				expandedComponents.add(pathComponent.expand(uriVariables, encoder));
-			}
-			return new PathComponentComposite(expandedComponents);
-		}
-
-		@Override
 		public void copyToUriComponentsBuilder(UriComponentsBuilder builder) {
 			for (PathComponent pathComponent : this.pathComponents) {
 				pathComponent.copyToUriComponentsBuilder(builder);
 			}
 		}
 	}
-
-
-	private static class QueryUriTemplateVariables implements UriTemplateVariables {
-
-		private final UriTemplateVariables delegate;
-
-		public QueryUriTemplateVariables(UriTemplateVariables delegate) {
-			this.delegate = delegate;
-		}
-
-		@Override
-		public Object getValue(@Nullable String name) {
-			Object value = this.delegate.getValue(name);
-			if (ObjectUtils.isArray(value)) {
-				value = StringUtils.arrayToCommaDelimitedString(ObjectUtils.toObjectArray(value));
-			}
-			return value;
-		}
-	}
-
 }

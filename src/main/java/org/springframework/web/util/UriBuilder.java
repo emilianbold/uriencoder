@@ -179,20 +179,4 @@ public interface UriBuilder {
 	 */
 	UriBuilder fragment(@Nullable String fragment);
 
-	/**
-	 * Build a {@link URI} instance and replaces URI template variables
-	 * with the values from an array.
-	 * @param uriVariables the map of URI variables
-	 * @return the URI
-	 */
-	URI build(Object... uriVariables);
-
-	/**
-	 * Build a {@link URI} instance and replaces URI template variables
-	 * with the values from a map.
-	 * @param uriVariables the map of URI variables
-	 * @return the URI
-	 */
-	URI build(Map<String, ?> uriVariables);
-
 }
